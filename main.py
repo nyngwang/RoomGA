@@ -19,10 +19,11 @@ Population = List[RoomMap]
 # Constants & Mapping
 W = 10
 H = 13
-P = 0.5
+P = 0.3
 M_P = 0.05
-FITNESS_LIMIT = 10
-P_SIZE = 10
+WEIGHT_LIMIT = 8000
+P_SIZE = 50
+GEN_LIMIT = 200
 orientations = [
     [0, 1],  # N
     [0, -1],  # S
@@ -30,6 +31,7 @@ orientations = [
     [-1, 0],  # W
 ]
 id_to_mapitemname = {
+    -1: '地板',
     0: 'Whiteboard',
     1: 'Projector Screen',
     2: 'Chippendale Table (2x3)',
@@ -49,7 +51,13 @@ id_to_mapitemname = {
 
 
 def get_size_mapitem() -> int:
-    return len(id_to_mapitemname)
+    return len(id_to_mapitemname)-1
+
+def one_hot_to_id(one_hot: RoomCell) -> int:
+    for i in range(get_size_mapitem()):
+        if one_hot[i]:
+            return i
+    return -1
 
 
 def one_hot_mapitem(appear_prob: float) -> RoomCell:
@@ -70,34 +78,31 @@ def random_population(size: int, h: int = H, w: int = W, appear_prob: float = P)
     return [random_room_map(h, w, appear_prob) for _ in range(size)]
 
 
-def fitness(room_map: RoomMap, limit: int = 5000) -> int:
+def fitness(room_map: RoomMap, weight_limit: int) -> Tuple[int, int, int, float]:
     value = 0
     weight = 0
 
     for h in range(H):
         for w in range(W):
             _value, _weight = bias.fitness(room_map, h, w)
-            for hot in range(get_size_mapitem()):
-                if room_map[h][w][hot] == 1:
-                    v, w = bias.fitness(hot, room_map, h, w)
-                    value += v
-                    weight += w
-                    break
-    if weight > limit:
-        return 0
-    return value
+            value += _value
+            weight += _weight
+    if weight > weight_limit:
+        value = 0
+
+    ratio = value / weight
+    diff = abs(value - weight)
+    return value, weight, diff, ratio
 
 
-def fitness_adapter(room_map: RoomMap) -> int:
-    return fitness(room_map)  # (W,H)=global, limit=default
+def fitness_adapter(room_map: RoomMap, weight_limit: int) -> Tuple[int, int, int, float]:
+    return fitness(room_map, weight_limit)  # (W,H)=global, limit=default
 
 
-def select_parents_pair(p: Population, fitness_func) -> Population:
-    # print(f"debug---p={p}")
-    # print(f"debug---select_parents_pair, weights={[fitness_func(room_map) for room_map in p]}")
+def select_parents_pair(population: Population, fitness_func) -> Population:
     return choices(
-        population=p,
-        weights=[fitness_func(room_map) for room_map in p],
+        population=population,
+        weights=[fitness_func(room_map)[3] for room_map in population],
         k=2
     )
 
@@ -107,45 +112,50 @@ def single_point_crossover(a: RoomMap, b: RoomMap) -> Tuple[RoomMap, RoomMap]:
         raise ValueError("RoomMap should have the same (w, h)")
     new_a = a
     new_b = b
-    new_a[H//2:], new_b[H//2:] = new_a[H//2:], new_b[H//2:]
+    new_a[H // 2:], new_b[H // 2:] = new_a[H // 2:], new_b[H // 2:]
     for i in range(H):
-        new_a[i][W//2:], new_b[i][W//2:] = new_b[i][W//2:], new_a[i][W//2:]
+        new_a[i][W // 2:], new_b[i][W // 2:] = new_b[i][W // 2:], new_a[i][W // 2:]
     return new_a, new_b
 
 
 def mutation(room_map: RoomMap, prob: Optional[float] = M_P) -> None:
     if random() > 0.05:
         return
-    ri = randint(0, H-1)
-    rj = randint(0, W-1)
+    ri = randint(0, H - 1)
+    rj = randint(0, W - 1)
     room_map[ri][rj] = one_hot_mapitem(prob)
 
 
 def run_evo(
         populate_func,
         fitness_func,
-        fitness_limit: int,
         selection_func,
         crossover_func,
         mutation_func,
-        generation_limit: int) -> Tuple[Population, int]:
-
+        generation_limit: int
+) -> Tuple[Population, int]:
     population = populate_func(P_SIZE)
 
     i = 0
     for i in range(generation_limit):
+        print(f"GEN={i + 1}, len(population)={len(population)}")
+
         population = sorted(
             population,
-            key=lambda room_map: fitness_func(room_map),
+            key=lambda room_map: fitness_func(room_map)[2],
             reverse=True
         )
 
-        if fitness_func(population[0]) >= fitness_limit:
+        print(f"Current best: (value={fitness_func(population[0])[0]}"
+              f", weight={fitness_func(population[0])[1]})")
+
+        if fitness_func(population[0]) == 0:
+            print("Everyone exceed the weight_limit")
             break
 
         next_generation = population[:2]  # pick elites first
 
-        for j in range(len(population)):
+        for j in range(len(population)//2 - 1):
             parents = selection_func(population, fitness_func)
             c1, c2 = crossover_func(parents[0], parents[1])
             mutation_func(c1)
@@ -156,7 +166,7 @@ def run_evo(
 
     population = sorted(
         population,
-        key=lambda room_map: fitness_func(room_map),
+        key=lambda room_map: fitness_func(room_map)[3],
         reverse=True
     )
 
@@ -164,20 +174,18 @@ def run_evo(
 
 
 if __name__ == '__main__':
-
     population, gens = run_evo(
         populate_func=random_population,
-        fitness_func=fitness_adapter,
-        fitness_limit=FITNESS_LIMIT,
+        fitness_func=partial(fitness_adapter, weight_limit=WEIGHT_LIMIT),
         selection_func=select_parents_pair,
         crossover_func=single_point_crossover,
         mutation_func=mutation,
-        generation_limit=100
+        generation_limit=GEN_LIMIT
     )
 
-    print(f"------------population------------:\n{population}")
     print(f"------------generation------------:\n{gens}")
-
-
-
-
+    pprint(f"------------best population------------:\n")
+    for h in range(H):
+        for w in range(W):
+            print(id_to_mapitemname[one_hot_to_id(population[0][h][w])], end=" ")
+        print("")

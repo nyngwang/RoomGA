@@ -86,35 +86,31 @@ def fitness(room_map: RoomMap, h: int, w: int) -> Tuple[Value, Weight]:
             value = 20
             weight = 100
     elif hot_index == 8:  # Chair (Simple)
+        weight = 120
         if 2 <= h <= H//2 and 1 <= w <= W-2:
             value = 120
-            for _w in range(1, W-1):
+            for _w in range(1, W-2):
                 if _w != w:
-                    value = 100
+                    value += 1000
                     break
-            weight = 10
-        else:
-            weight = 40
     elif hot_index == 9:  # Chippendale Table (3x3)
+        weight = 200
         if 2 <= h <= H-5 and 1 <= w <= W-5:
-            value = 120
+            value = 400
             for _w in range(w, w + 3):
                 if is_chair(room_map[h + 3][_w]):
-                    value += 100
+                    value += 120
                 if is_chair(room_map[h - 1][_w]):
-                    value += 100
+                    value += 120
             for _x in range(h, h + 2):
                 if is_chair(room_map[_x][w + 3]):
-                    value += 100
+                    value += 120
                 if is_chair(room_map[_x][w - 1]):
-                    value += 100
-        else:
-            value = 0
-        weight = 30
+                    value += 120
     elif hot_index == 10:  # Bookshelf [Tall] (1x2)
         if h == 0:
-            value = 50
-            weight = 10
+            value = 120
+            weight = 50
     elif hot_index == 11:  # Laptop
         pass
     elif hot_index == 12:  # Microphone
