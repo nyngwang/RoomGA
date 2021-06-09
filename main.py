@@ -1,6 +1,7 @@
 from functools import partial
 from random import choice, randint, choices, random
 from typing import List, Callable, Tuple, Optional
+from pprint import pprint
 from fitness import bias
 
 # Defining Type
@@ -16,6 +17,12 @@ Population = List[RoomMap]
 # MutationFunc = Callable[[RoomMap, Optional[float]], None]  # mutation
 
 # Constants & Mapping
+W = 10
+H = 13
+P = 0.5
+M_P = 0.05
+FITNESS_LIMIT = 10
+P_SIZE = 10
 orientations = [
     [0, 1],  # N
     [0, -1],  # S
@@ -39,41 +46,40 @@ id_to_mapitemname = {
     13: 'Lucky Bamboo',
     14: 'Dining Chair (Square)'
 }
-W = 10
-H = 13
-P = 0.5
-M_P = 0.05
-FITNESS_LIMIT = 10
-P_SIZE = 10
 
 
-def one_hot_mapitem(prob: float) -> RoomCell:
-    arr = [0] * len(id_to_mapitemname)
-    if random() > prob:
+def get_size_mapitem() -> int:
+    return len(id_to_mapitemname)
+
+
+def one_hot_mapitem(appear_prob: float) -> RoomCell:
+    arr = [0] * get_size_mapitem()
+    if random() > appear_prob:
         arr.extend([0, 0])
         return arr
-    arr[randint(0, len(id_to_mapitemname) - 1)] = 1
+    arr[randint(0, get_size_mapitem() - 1)] = 1
     arr.extend(choice(orientations))
     return arr
 
 
-def random_room_map(w: int = W, h: int = H, prob: float = P) -> RoomMap:
-    return [[one_hot_mapitem(prob) for _ in range(w)] for _ in range(h)]
+def random_room_map(h: int, w: int, appear_prob: float) -> RoomMap:
+    return [[one_hot_mapitem(appear_prob) for _ in range(w)] for _ in range(h)]
 
 
-def random_population(size: int, w: int = W, h: int = H, prob: float = P) -> Population:
-    return [random_room_map(w, h, prob) for _ in range(size)]
+def random_population(size: int, h: int = H, w: int = W, appear_prob: float = P) -> Population:
+    return [random_room_map(h, w, appear_prob) for _ in range(size)]
 
 
 def fitness(room_map: RoomMap, limit: int = 5000) -> int:
     value = 0
     weight = 0
 
-    for i in range(H):
-        for j in range(W):
-            for hot in range(len(id_to_mapitemname)):
-                if room_map[i][j][hot] == 1:
-                    v, w = bias.fitness(hot, room_map, i, j)
+    for h in range(H):
+        for w in range(W):
+            _value, _weight = bias.fitness(room_map, h, w)
+            for hot in range(get_size_mapitem()):
+                if room_map[h][w][hot] == 1:
+                    v, w = bias.fitness(hot, room_map, h, w)
                     value += v
                     weight += w
                     break
