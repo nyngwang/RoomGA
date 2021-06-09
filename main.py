@@ -19,10 +19,10 @@ Population = List[RoomMap]
 # Constants & Mapping
 W = 10
 H = 13
-P = 0.4
-M_P = 0.2
-WEIGHT_LIMIT = 15000
-P_SIZE = 100
+P = 0.3
+M_P = 0.1
+WEIGHT_LIMIT = 13000
+P_SIZE = 50
 GEN_LIMIT = 100
 orientations = [
     [0, 1],  # N
@@ -60,9 +60,17 @@ def one_hot_to_id(one_hot: RoomCell) -> int:
     return -1
 
 
+def is_types(room_cell: RoomCell, types) -> bool:
+    for i in range(get_size_mapitem()):
+        if i in types:
+            if room_cell[i] == 1:
+                return True
+    return False
+
+
 def one_hot_mapitem(appear_prob: float) -> RoomCell:
     arr = [0] * get_size_mapitem()
-    if random() > appear_prob:
+    if random() >= appear_prob:
         arr.extend([0, 0])
         return arr
     arr[randint(0, get_size_mapitem() - 1)] = 1
@@ -96,7 +104,7 @@ def fitness(room_map: RoomMap) -> Tuple[int, int, int, float]:
 def select_parents_pair(population: Population, fitness_func) -> Population:
     return choices(
         population=population,
-        weights=[fitness_func(room_map)[3] for room_map in population],
+        weights=[fitness_func(room_map)[2] for room_map in population],
         k=2
     )
 
@@ -117,7 +125,8 @@ def mutation(room_map: RoomMap, prob: float = M_P) -> None:
         return
     ri = randint(0, H - 1)
     rj = randint(0, W - 1)
-    room_map[ri][rj] = one_hot_mapitem(prob)
+    if is_types(room_map[ri][rj], [-1]):
+        room_map[ri][rj] = one_hot_mapitem(1)
 
 
 def run_evo(
