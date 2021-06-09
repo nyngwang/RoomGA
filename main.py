@@ -19,11 +19,11 @@ Population = List[RoomMap]
 # Constants & Mapping
 W = 10
 H = 13
-P = 0.3
-M_P = 0.05
-WEIGHT_LIMIT = 8000
-P_SIZE = 50
-GEN_LIMIT = 200
+P = 0.4
+M_P = 0.2
+WEIGHT_LIMIT = 15000
+P_SIZE = 100
+GEN_LIMIT = 100
 orientations = [
     [0, 1],  # N
     [0, -1],  # S
@@ -78,7 +78,7 @@ def random_population(size: int, h: int = H, w: int = W, appear_prob: float = P)
     return [random_room_map(h, w, appear_prob) for _ in range(size)]
 
 
-def fitness(room_map: RoomMap, weight_limit: int) -> Tuple[int, int, int, float]:
+def fitness(room_map: RoomMap) -> Tuple[int, int, int, float]:
     value = 0
     weight = 0
 
@@ -87,16 +87,10 @@ def fitness(room_map: RoomMap, weight_limit: int) -> Tuple[int, int, int, float]
             _value, _weight = bias.fitness(room_map, h, w)
             value += _value
             weight += _weight
-    if weight > weight_limit:
-        value = 0
 
-    ratio = value / weight
     diff = abs(value - weight)
+    ratio = value / weight
     return value, weight, diff, ratio
-
-
-def fitness_adapter(room_map: RoomMap, weight_limit: int) -> Tuple[int, int, int, float]:
-    return fitness(room_map, weight_limit)  # (W,H)=global, limit=default
 
 
 def select_parents_pair(population: Population, fitness_func) -> Population:
@@ -118,8 +112,8 @@ def single_point_crossover(a: RoomMap, b: RoomMap) -> Tuple[RoomMap, RoomMap]:
     return new_a, new_b
 
 
-def mutation(room_map: RoomMap, prob: Optional[float] = M_P) -> None:
-    if random() > 0.05:
+def mutation(room_map: RoomMap, prob: float = M_P) -> None:
+    if random() > prob:
         return
     ri = randint(0, H - 1)
     rj = randint(0, W - 1)
@@ -142,14 +136,14 @@ def run_evo(
 
         population = sorted(
             population,
-            key=lambda room_map: fitness_func(room_map)[2],
+            key=lambda room_map: fitness_func(room_map)[3],
             reverse=True
         )
 
         print(f"Current best: (value={fitness_func(population[0])[0]}"
               f", weight={fitness_func(population[0])[1]})")
 
-        if fitness_func(population[0]) == 0:
+        if fitness_func(population[0])[1] > WEIGHT_LIMIT:
             print("Everyone exceed the weight_limit")
             break
 
@@ -176,7 +170,7 @@ def run_evo(
 if __name__ == '__main__':
     population, gens = run_evo(
         populate_func=random_population,
-        fitness_func=partial(fitness_adapter, weight_limit=WEIGHT_LIMIT),
+        fitness_func=fitness,
         selection_func=select_parents_pair,
         crossover_func=single_point_crossover,
         mutation_func=mutation,
