@@ -18,10 +18,10 @@ Population = List[RoomMap]
 W = 10
 H = 13
 P = 0.3
-M_P = 0.7
-WEIGHT_LIMIT = 14000
-P_SIZE = 10
-GEN_LIMIT = 300
+M_P = 0.05
+WEIGHT_LIMIT = 15000
+P_SIZE = 63
+GEN_LIMIT = 200
 orientations = [
     [0, 1],  # N
     [0, -1],  # S
@@ -147,6 +147,7 @@ def mutation(room_map: RoomMap, prob: float = M_P) -> None:
         return
     ri = randint(0, H - 1)
     rj = randint(0, W - 1)
+    # TODO: This heuristic might not be needed.
     if is_types(room_map[ri][rj], [-1]):
         room_map[ri][rj] = one_hot_mapitem(1)
 
@@ -199,8 +200,9 @@ def run_evo(
 
 
 if __name__ == '__main__':
+    from prepare_data.workspace import workspace_population
     population, gens = run_evo(
-        populate_func=random_population,
+        populate_func=workspace_population,
         fitness_func=fitness,
         selection_func=select_parents_pair,
         crossover_func=single_point_crossover,

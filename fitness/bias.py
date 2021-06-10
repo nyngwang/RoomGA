@@ -7,6 +7,7 @@ Weight = int
 
 def fitness(room_map: RoomMap, h: int, w: int) -> Tuple[Value, Weight]:
     from main import W, H, is_types, one_hot_mapitem
+    # TODO: Remove heuristic about overlapping objects.
     value = 0
     weight = 0
     hot_index = -1

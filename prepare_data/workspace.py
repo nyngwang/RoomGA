@@ -1,5 +1,6 @@
 from pprint import pprint
-from main import RoomMap
+from main import RoomMap, Population
+from random import choices
 import requests
 
 
@@ -17,6 +18,11 @@ room_maps = []
 ChaoyuTrain = 0
 NingTrain = 1
 HanTrain = 2
+
+
+def workspace_population(size: int) -> Population:
+    prepare()
+    return choices(room_maps, k=size)
 
 
 def prepare():
