@@ -30,7 +30,6 @@ def prepare():
     json_rooms = requests.get(url).json()
 
     for m in range(TOTAL_MEMBERS):
-        if m != 1: continue
         for i_json_room_from_m in range(EACH_ONE_DRAWN):
             room_map = from_jsonroom_to_roommap(json_rooms[m*EACH_ONE_DRAWN+i_json_room_from_m]["room"])
             room_maps.append(room_map)
