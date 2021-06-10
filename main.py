@@ -1,8 +1,6 @@
-from functools import partial
 from random import choice, randint, choices, random
 from typing import List, Callable, Tuple, Optional
 from pprint import pprint
-from fitness import bias
 
 # Defining Type
 RoomCell = List[int]  # 0~14=種類one-hot; (15,16)=方向
@@ -20,10 +18,10 @@ Population = List[RoomMap]
 W = 10
 H = 13
 P = 0.3
-M_P = 0.1
-WEIGHT_LIMIT = 13000
-P_SIZE = 50
-GEN_LIMIT = 100
+M_P = 0.7
+WEIGHT_LIMIT = 14000
+P_SIZE = 10
+GEN_LIMIT = 300
 orientations = [
     [0, 1],  # N
     [0, -1],  # S
@@ -39,7 +37,7 @@ id_to_mapitemname = {
     4: 'Bookshelf (2x4)',
     5: 'Potted Plant (Spikey)',
     6: 'Mod Chair',
-    7: 'Captain’s Chair',
+    7: 'Captain\'s Chair',
     8: 'Chair (Simple)',
     9: 'Chippendale Table (3x3)',
     10: 'Bookshelf [Tall] (1x2)',
@@ -48,10 +46,29 @@ id_to_mapitemname = {
     13: 'Lucky Bamboo',
     14: 'Dining Chair (Square)'
 }
+mapitemname_to_id = {
+    '地板': -1,
+    'Whiteboard': 0,
+    'Projector Screen': 1,
+    'Chippendale Table (2x3)': 2,
+    'TV (Flatscreen)': 3,
+    'Bookshelf (2x4)': 4,
+    'Potted Plant (Spikey)': 5,
+    'Mod Chair': 6,
+    'Captain\'s Chair': 7,
+    'Chair (Simple)': 8,
+    'Chippendale Table (3x3)': 9,
+    'Bookshelf [Tall] (1x2)': 10,
+    'Laptop': 11,
+    'Microphone': 12,
+    'Lucky Bamboo': 13,
+    'Dining Chair (Square)': 14
+}
 
 
 def get_size_mapitem() -> int:
     return len(id_to_mapitemname)-1
+
 
 def one_hot_to_id(one_hot: RoomCell) -> int:
     for i in range(get_size_mapitem()):
@@ -82,11 +99,16 @@ def random_room_map(h: int, w: int, appear_prob: float) -> RoomMap:
     return [[one_hot_mapitem(appear_prob) for _ in range(w)] for _ in range(h)]
 
 
+def empty_room_map(h: int, w: int) -> RoomMap:
+    return [[one_hot_mapitem(0) for _ in range(w)] for _ in range(h)]
+
+
 def random_population(size: int, h: int = H, w: int = W, appear_prob: float = P) -> Population:
     return [random_room_map(h, w, appear_prob) for _ in range(size)]
 
 
 def fitness(room_map: RoomMap) -> Tuple[int, int, int, float]:
+    from fitness import bias
     value = 0
     weight = 0
 
@@ -104,7 +126,7 @@ def fitness(room_map: RoomMap) -> Tuple[int, int, int, float]:
 def select_parents_pair(population: Population, fitness_func) -> Population:
     return choices(
         population=population,
-        weights=[fitness_func(room_map)[2] for room_map in population],
+        weights=[fitness_func(room_map)[3] for room_map in population],
         k=2
     )
 
